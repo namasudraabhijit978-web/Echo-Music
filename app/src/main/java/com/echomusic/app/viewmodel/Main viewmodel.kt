@@ -16,6 +16,7 @@
 
 package com.echomusic.app.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -44,6 +45,9 @@ class MainViewModel @Inject constructor(
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs.asStateFlow()
 
+    private val _favoriteSongs = MutableStateFlow<List<Song>>(emptyList())
+    val favoriteSongs: StateFlow<List<Song>> = _favoriteSongs.asStateFlow()
+
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -62,6 +66,7 @@ class MainViewModel @Inject constructor(
     init {
         playbackController.initializeController()
         setupPlayerListener()
+        loadFavorites()
     }
 
     private fun setupPlayerListener() {
@@ -79,7 +84,8 @@ class MainViewModel @Inject constructor(
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     mediaItem?.mediaId?.toLongOrNull()?.let { id ->
-                        val song = _songs.value.find { it.id == id }
+                        // Pehle all songs mein dhundho, nahi toh favorites mein dhundho
+                        val song = _songs.value.find { it.id == id } ?: _favoriteSongs.value.find { it.id == id }
                         if (song != null) {
                             _currentSong.value = song
                             checkIfFavorite(id)
@@ -108,13 +114,32 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun playSong(song: Song) {
+    private fun loadFavorites() {
+        viewModelScope.launch {
+            favoriteRepository.getAllFavorites().collect { entities ->
+                val songs = entities.map { entity ->
+                    Song(
+                        id = entity.id,
+                        title = entity.title,
+                        artist = entity.artist,
+                        album = entity.album,
+                        albumId = entity.albumId,
+                        duration = entity.duration,
+                        mediaUri = Uri.parse(entity.mediaUriString),
+                        artworkUri = Uri.parse(entity.artworkUriString)
+                    )
+                }
+                _favoriteSongs.value = songs
+            }
+        }
+    }
+
+    fun playSong(song: Song, playlist: List<Song> = _songs.value) {
         _currentSong.value = song
-        val currentPlaylist = _songs.value
-        val index = currentPlaylist.indexOfFirst { it.id == song.id }
+        val index = playlist.indexOfFirst { it.id == song.id }
         
         if (index != -1) {
-            playbackController.playPlaylist(currentPlaylist, index)
+            playbackController.playPlaylist(playlist, index)
         } else {
             playbackController.playPlaylist(listOf(song), 0)
         }
