@@ -19,9 +19,13 @@ package com.echomusic.app.ui.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.echomusic.app.ui.screens.AlbumDetailsScreen
+import com.echomusic.app.ui.screens.AlbumsScreen
 import com.echomusic.app.ui.screens.FavoritesScreen
 import com.echomusic.app.ui.screens.HomeScreen
 import com.echomusic.app.ui.screens.PlayerScreen
@@ -38,24 +42,40 @@ fun AppNavigation(viewModel: MainViewModel) {
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
-                onNavigateToPlayer = {
-                    navController.navigate("player")
-                },
-                onNavigateToFavorites = {
-                    navController.navigate("favorites")
-                }
+                onNavigateToPlayer = { navController.navigate("player") },
+                onNavigateToFavorites = { navController.navigate("favorites") },
+                // Note: Isko abhi UI me call karna hai for Album list
+                onNavigateToAlbums = { navController.navigate("albums") }
+            )
+        }
+
+        composable("albums") {
+            AlbumsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onAlbumClick = { albumId -> navController.navigate("album_details/$albumId") },
+                onNavigateToPlayer = { navController.navigate("player") }
+            )
+        }
+
+        composable(
+            route = "album_details/{albumId}",
+            arguments = listOf(navArgument("albumId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val albumId = backStackEntry.arguments?.getLong("albumId") ?: return@composable
+            AlbumDetailsScreen(
+                albumId = albumId,
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPlayer = { navController.navigate("player") }
             )
         }
 
         composable("favorites") {
             FavoritesScreen(
                 viewModel = viewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToPlayer = {
-                    navController.navigate("player")
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPlayer = { navController.navigate("player") }
             )
         }
         
@@ -76,9 +96,7 @@ fun AppNavigation(viewModel: MainViewModel) {
         ) {
             PlayerScreen(
                 viewModel = viewModel,
-                onClose = {
-                    navController.popBackStack()
-                }
+                onClose = { navController.popBackStack() }
             )
         }
     }
