@@ -32,10 +32,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -61,38 +65,54 @@ import com.echomusic.app.viewmodel.MainViewModel
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
-    onNavigateToPlayer: () -> Unit
+    onNavigateToPlayer: () -> Unit,
+    onNavigateToFavorites: () -> Unit
 ) {
     val songs by viewModel.songs.collectAsState()
     val currentSong by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
     
-    var hasPermission by remember { mutableStateOf(false) }
+    var hasAudioPermission by remember { mutableStateOf(false) }
 
-    val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_AUDIO
+    val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
     } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            hasPermission = isGranted
-            if (isGranted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            val audioGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions[Manifest.permission.READ_MEDIA_AUDIO] == true
+            } else {
+                permissions[Manifest.permission.READ_EXTERNAL_STORAGE] == true
+            }
+            
+            hasAudioPermission = audioGranted
+            if (audioGranted) {
                 viewModel.loadSongs()
             }
         }
     )
 
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(permissionToRequest)
+        permissionLauncher.launch(permissionsToRequest)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Echo Music") }
+                title = { Text("Echo Music") },
+                actions = {
+                    IconButton(onClick = onNavigateToFavorites) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Favorites",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             )
         },
         bottomBar = {
@@ -104,7 +124,7 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        if (hasPermission) {
+        if (hasAudioPermission) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -115,7 +135,7 @@ fun HomeScreen(
                 items(songs, key = { it.id }) { song ->
                     SongItem(
                         song = song,
-                        onClick = { viewModel.playSong(song) }
+                        onClick = { viewModel.playSong(song, songs) }
                     )
                 }
             }
@@ -127,9 +147,9 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Storage permission is required to load music.")
+                Text("Storage permission is required.")
                 Button(
-                    onClick = { permissionLauncher.launch(permissionToRequest) },
+                    onClick = { permissionLauncher.launch(permissionsToRequest) },
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
                     Text("Grant Permission")
