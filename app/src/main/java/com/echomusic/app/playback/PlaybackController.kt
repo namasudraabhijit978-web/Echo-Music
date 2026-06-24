@@ -36,6 +36,9 @@ class PlaybackController @Inject constructor(
     var mediaController: MediaController? = null
         private set
 
+    val currentPosition: Long
+        get() = mediaController?.currentPosition ?: 0L
+
     fun initializeController() {
         val sessionToken = SessionToken(context, ComponentName(context, EchoMusicService::class.java))
         mediaControllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -60,6 +63,18 @@ class PlaybackController @Inject constructor(
                 it.play()
             }
         }
+    }
+
+    fun seekTo(position: Long) {
+        mediaController?.seekTo(position)
+    }
+
+    fun skipToNext() {
+        mediaController?.seekToNextMediaItem()
+    }
+
+    fun skipToPrevious() {
+        mediaController?.seekToPreviousMediaItem()
     }
 
     fun releaseController() {
