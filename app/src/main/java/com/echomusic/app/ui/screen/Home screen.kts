@@ -56,12 +56,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.echomusic.app.model.Song
+import com.echomusic.app.ui.components.BottomPlayerBar
 import com.echomusic.app.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
     val songs by viewModel.songs.collectAsState()
+    val currentSong by viewModel.currentSong.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    
     var hasPermission by remember { mutableStateOf(false) }
 
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -88,6 +92,13 @@ fun HomeScreen(viewModel: MainViewModel) {
         topBar = {
             TopAppBar(
                 title = { Text("Echo Music") }
+            )
+        },
+        bottomBar = {
+            BottomPlayerBar(
+                currentSong = currentSong,
+                isPlaying = isPlaying,
+                onPlayPauseClick = { viewModel.togglePlayPause() }
             )
         }
     ) { paddingValues ->
