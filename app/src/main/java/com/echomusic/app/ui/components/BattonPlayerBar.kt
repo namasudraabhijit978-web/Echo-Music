@@ -17,6 +17,7 @@
 package com.echomusic.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +46,7 @@ fun BottomPlayerBar(
     currentSong: Song?,
     isPlaying: Boolean,
     onPlayPauseClick: () -> Unit,
+    onBarClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (currentSong == null) return
@@ -55,6 +57,7 @@ fun BottomPlayerBar(
             .padding(8.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
+            .clickable { onBarClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
