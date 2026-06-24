@@ -14,213 +14,120 @@
  * limitations under the License.
  */
 
-package com.echomusic.app.viewmodel
+package com.echomusic.app.ui.screens
 
-import android.net.Uri
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import com.echomusic.app.data.repository.FavoriteRepository
-import com.echomusic.app.data.repository.SongRepository
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.echomusic.app.model.Album
-import com.echomusic.app.model.Song
-import com.echomusic.app.playback.PlaybackController
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import com.echomusic.app.ui.components.AlbumArtImage
+import com.echomusic.app.ui.components.BottomPlayerBar
+import com.echomusic.app.viewmodel.MainViewModel
 
-@HiltViewModel
-class MainViewModel @Inject constructor(
-    private val songRepository: SongRepository,
-    private val favoriteRepository: FavoriteRepository,
-    private val playbackController: PlaybackController
-) : ViewModel() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AlbumsScreen(
+    viewModel: MainViewModel,
+    onNavigateBack: () -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onNavigateToPlayer: () -> Unit
+) {
+    val albums by viewModel.albums.collectAsState()
+    val currentSong by viewModel.currentSong.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
 
-    private val _songs = MutableStateFlow<List<Song>>(emptyList())
-    
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    val filteredSongs: StateFlow<List<Song>> = combine(_songs, _searchQuery) { songList, query ->
-        if (query.isBlank()) {
-            songList
-        } else {
-            songList.filter { 
-                it.title.contains(query, ignoreCase = true) || 
-                it.artist.contains(query, ignoreCase = true) 
-            }
-        }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    val albums: StateFlow<List<Album>> = _songs.map { songList ->
-        songList.groupBy { it.albumId }.map { (albumId, songs) ->
-            val firstSong = songs.first()
-            Album(
-                id = albumId,
-                title = firstSong.album,
-                artist = firstSong.artist,
-                artworkUri = firstSong.artworkUri,
-                songs = songs.sortedBy { it.title }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Albums") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
-        }.sortedBy { it.title }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    private val _favoriteSongs = MutableStateFlow<List<Song>>(emptyList())
-    val favoriteSongs: StateFlow<List<Song>> = _favoriteSongs.asStateFlow()
-
-    private val _currentSong = MutableStateFlow<Song?>(null)
-    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
-
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
-
-    private val _currentPosition = MutableStateFlow(0L)
-    val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
-
-    private val _isCurrentSongFavorite = MutableStateFlow(false)
-    val isCurrentSongFavorite: StateFlow<Boolean> = _isCurrentSongFavorite.asStateFlow()
-
-    private var positionJob: Job? = null
-    private var favoriteJob: Job? = null
-
-    init {
-        playbackController.initializeController()
-        setupPlayerListener()
-        loadFavorites()
-    }
-
-    private fun setupPlayerListener() {
-        viewModelScope.launch {
-            delay(500)
-            playbackController.mediaController?.addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    _isPlaying.value = isPlaying
-                    if (isPlaying) {
-                        startPositionUpdates()
-                    } else {
-                        positionJob?.cancel()
-                    }
-                }
-
-                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                    mediaItem?.mediaId?.toLongOrNull()?.let { id ->
-                        val song = _songs.value.find { it.id == id } ?: _favoriteSongs.value.find { it.id == id }
-                        if (song != null) {
-                            _currentSong.value = song
-                            checkIfFavorite(id)
-                        }
-                    }
-                }
-            })
+        },
+        bottomBar = {
+            BottomPlayerBar(
+                currentSong = currentSong,
+                isPlaying = isPlaying,
+                onPlayPauseClick = { viewModel.togglePlayPause() },
+                onBarClick = onNavigateToPlayer
+            )
         }
-    }
-
-    private fun startPositionUpdates() {
-        positionJob?.cancel()
-        positionJob = viewModelScope.launch {
-            while (true) {
-                _currentPosition.value = playbackController.currentPosition
-                delay(1000)
+    ) { paddingValues ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(albums, key = { it.id }) { album ->
+                AlbumGridItem(
+                    album = album,
+                    onClick = { onAlbumClick(album.id) }
+                )
             }
         }
     }
+}
 
-    fun loadSongs() {
-        viewModelScope.launch {
-            songRepository.getAllSongs()
-                .catch { _songs.value = emptyList() }
-                .collect { songList -> _songs.value = songList }
-        }
-    }
-
-    private fun loadFavorites() {
-        viewModelScope.launch {
-            favoriteRepository.getAllFavorites().collect { entities ->
-                val songs = entities.map { entity ->
-                    Song(
-                        id = entity.id,
-                        title = entity.title,
-                        artist = entity.artist,
-                        album = entity.album,
-                        albumId = entity.albumId,
-                        duration = entity.duration,
-                        mediaUri = Uri.parse(entity.mediaUriString),
-                        artworkUri = Uri.parse(entity.artworkUriString)
-                    )
-                }
-                _favoriteSongs.value = songs
-            }
-        }
-    }
-
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun getAlbumById(albumId: Long): Album? {
-        return albums.value.find { it.id == albumId }
-    }
-
-    fun playSong(song: Song, playlist: List<Song> = filteredSongs.value) {
-        _currentSong.value = song
-        val index = playlist.indexOfFirst { it.id == song.id }
-        
-        if (index != -1) {
-            playbackController.playPlaylist(playlist, index)
-        } else {
-            playbackController.playPlaylist(listOf(song), 0)
-        }
-        checkIfFavorite(song.id)
-    }
-
-    private fun checkIfFavorite(songId: Long) {
-        favoriteJob?.cancel()
-        favoriteJob = viewModelScope.launch {
-            favoriteRepository.isFavorite(songId).collect { isFav ->
-                _isCurrentSongFavorite.value = isFav
-            }
-        }
-    }
-
-    fun toggleFavorite() {
-        val song = _currentSong.value ?: return
-        viewModelScope.launch {
-            favoriteRepository.toggleFavorite(song, _isCurrentSongFavorite.value)
-        }
-    }
-
-    fun togglePlayPause() {
-        playbackController.playPause()
-    }
-
-    fun seekTo(position: Long) {
-        playbackController.seekTo(position)
-        _currentPosition.value = position
-    }
-
-    fun skipToNext() {
-        playbackController.skipToNext()
-    }
-
-    fun skipToPrevious() {
-        playbackController.skipToPrevious()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        positionJob?.cancel()
-        favoriteJob?.cancel()
-        playbackController.releaseController()
+@Composable
+fun AlbumGridItem(album: Album, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        AlbumArtImage(
+            uri = album.artworkUri,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+        )
+        Text(
+            text = album.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            text = "${album.songs.size} Songs",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
