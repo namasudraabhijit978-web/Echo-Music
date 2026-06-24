@@ -24,7 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.echomusic.app.ui.screens.HomeScreen
+import com.echomusic.app.ui.navigation.AppNavigation
 import com.echomusic.app.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val mainViewModel: MainViewModel = hiltViewModel()
-                    HomeScreen(viewModel = mainViewModel)
+                    AppNavigation(viewModel = mainViewModel)
                 }
             }
         }
