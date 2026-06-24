@@ -20,11 +20,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.echomusic.app.ui.navigation.AppNavigation
+import com.echomusic.app.ui.theme.EchoMusicTheme
+import com.echomusic.app.utils.ColorExtractor
 import com.echomusic.app.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -33,12 +42,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            val mainViewModel: MainViewModel = hiltViewModel()
+            val currentSong by mainViewModel.currentSong.collectAsState()
+            
+            var dominantColor by remember { mutableStateOf<Color?>(null) }
+            val context = LocalContext.current
+
+            // Album art change hote hi color extract karna
+            LaunchedEffect(currentSong) {
+                currentSong?.let { song ->
+                    dominantColor = ColorExtractor.getDominantColor(context, song.artworkUri)
+                } ?: run {
+                    dominantColor = null
+                }
+            }
+
+            EchoMusicTheme(customDominantColor = dominantColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
-                    val mainViewModel: MainViewModel = hiltViewModel()
                     AppNavigation(viewModel = mainViewModel)
                 }
             }
