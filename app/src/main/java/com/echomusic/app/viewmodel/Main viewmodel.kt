@@ -18,6 +18,7 @@ package com.echomusic.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
@@ -75,6 +76,16 @@ class MainViewModel @Inject constructor(
                         positionJob?.cancel()
                     }
                 }
+
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    mediaItem?.mediaId?.toLongOrNull()?.let { id ->
+                        val song = _songs.value.find { it.id == id }
+                        if (song != null) {
+                            _currentSong.value = song
+                            checkIfFavorite(id)
+                        }
+                    }
+                }
             })
         }
     }
@@ -92,18 +103,21 @@ class MainViewModel @Inject constructor(
     fun loadSongs() {
         viewModelScope.launch {
             songRepository.getAllSongs()
-                .catch { 
-                    _songs.value = emptyList()
-                }
-                .collect { songList ->
-                    _songs.value = songList
-                }
+                .catch { _songs.value = emptyList() }
+                .collect { songList -> _songs.value = songList }
         }
     }
 
     fun playSong(song: Song) {
         _currentSong.value = song
-        playbackController.playSong(song)
+        val currentPlaylist = _songs.value
+        val index = currentPlaylist.indexOfFirst { it.id == song.id }
+        
+        if (index != -1) {
+            playbackController.playPlaylist(currentPlaylist, index)
+        } else {
+            playbackController.playPlaylist(listOf(song), 0)
+        }
         checkIfFavorite(song.id)
     }
 
