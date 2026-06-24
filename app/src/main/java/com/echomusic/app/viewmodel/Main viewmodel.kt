@@ -18,10 +18,12 @@ package com.echomusic.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
 import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Song
 import com.echomusic.app.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,20 +37,36 @@ class MainViewModel @Inject constructor(
     private val playbackController: PlaybackController
 ) : ViewModel() {
 
-    // UI State for songs list
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs.asStateFlow()
 
+    private val _currentSong = MutableStateFlow<Song?>(null)
+    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
     init {
-        // Initialize MediaController so it's ready before user clicks play
         playbackController.initializeController()
+        setupPlayerListener()
+    }
+
+    private fun setupPlayerListener() {
+        viewModelScope.launch {
+            // Delay to wait for controller initialization
+            delay(500)
+            playbackController.mediaController?.addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    _isPlaying.value = isPlaying
+                }
+            })
+        }
     }
 
     fun loadSongs() {
         viewModelScope.launch {
             songRepository.getAllSongs()
                 .catch { 
-                    // Yahan errors handle honge (e.g., permissions missing)
                     _songs.value = emptyList()
                 }
                 .collect { songList ->
@@ -58,6 +76,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun playSong(song: Song) {
+        _currentSong.value = song
         playbackController.playSong(song)
     }
 
@@ -67,7 +86,6 @@ class MainViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Prevent memory leaks when ViewModel is destroyed
         playbackController.releaseController()
     }
 }
