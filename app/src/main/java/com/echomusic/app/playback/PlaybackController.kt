@@ -20,6 +20,7 @@ import android.content.ComponentName
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.echomusic.app.model.Song
@@ -49,7 +50,19 @@ class PlaybackController @Inject constructor(
     }
 
     fun playSong(song: Song) {
-        val mediaItem = MediaItem.fromUri(song.mediaUri)
+        val metadata = MediaMetadata.Builder()
+            .setTitle(song.title)
+            .setArtist(song.artist)
+            .setAlbumTitle(song.album)
+            .setArtworkUri(song.artworkUri)
+            .build()
+
+        val mediaItem = MediaItem.Builder()
+            .setUri(song.mediaUri)
+            .setMediaId(song.id.toString())
+            .setMediaMetadata(metadata)
+            .build()
+
         mediaController?.setMediaItem(mediaItem)
         mediaController?.prepare()
         mediaController?.play()
