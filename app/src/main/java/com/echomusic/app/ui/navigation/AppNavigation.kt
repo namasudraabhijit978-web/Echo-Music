@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.echomusic.app.ui.screens.FavoritesScreen
 import com.echomusic.app.ui.screens.HomeScreen
 import com.echomusic.app.ui.screens.PlayerScreen
 import com.echomusic.app.viewmodel.MainViewModel
@@ -37,6 +38,21 @@ fun AppNavigation(viewModel: MainViewModel) {
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
+                onNavigateToPlayer = {
+                    navController.navigate("player")
+                },
+                onNavigateToFavorites = {
+                    navController.navigate("favorites")
+                }
+            )
+        }
+
+        composable("favorites") {
+            FavoritesScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
                 onNavigateToPlayer = {
                     navController.navigate("player")
                 }
