@@ -1,17 +1,21 @@
-Apache License
-Version 2.0, January 2004
-http://www.apache.org/licenses/
+# Echo Music 🎵
 
-Copyright 2026 Chronos Developers
+Echo Music is a next-generation, high-performance offline music player for Android. Built from the ground up using modern Android development standards, it aims to provide a buttery-smooth, gapless audio experience with a stunning Material You interface.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+## 🚀 Key Features
+*   **Next-Gen Audio Engine:** Powered by AndroidX Media3 (ExoPlayer) for true gapless playback, crossfading, and perfect audio focus management.
+*   **100% Jetpack Compose:** A buttery-smooth, responsive UI built completely without XML.
+*   **Dynamic Theming:** Deep integration with Material Design 3 and Palette API — the app UI adapts to the colors of your currently playing album art.
+*   **Ultra-Fast Scanning:** Custom MediaStore parser to load thousands of local audio files in milliseconds.
+*   **Offline First:** No trackers, no ads, just your local `.mp3` and `.flac` files.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+## 🛠️ Technical Stack
+*   **Language:** Kotlin
+*   **Architecture:** Single-Module Clean Architecture (MVVM)
+*   **Playback:** AndroidX Media3 & MediaSessionService
+*   **UI:** Jetpack Compose & Material 3
+*   **Database:** Room (for Playlists, History, and Favorites)
+*   **Dependency Injection:** Dagger Hilt
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+## 📄 License
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
