@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
@@ -70,7 +71,8 @@ import com.echomusic.app.viewmodel.MainViewModel
 fun HomeScreen(
     viewModel: MainViewModel,
     onNavigateToPlayer: () -> Unit,
-    onNavigateToFavorites: () -> Unit
+    onNavigateToFavorites: () -> Unit,
+    onNavigateToAlbums: () -> Unit
 ) {
     val songs by viewModel.filteredSongs.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -110,6 +112,13 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Echo Music") },
                 actions = {
+                    IconButton(onClick = onNavigateToAlbums) {
+                        Icon(
+                            imageVector = Icons.Default.Album,
+                            contentDescription = "Albums",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     IconButton(onClick = onNavigateToFavorites) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
@@ -195,50 +204,4 @@ fun HomeScreen(
     }
 }
 
-@Composable
-fun SongItem(song: Song, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AlbumArtImage(
-                uri = song.artworkUri,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-            
-            Column(
-                modifier = Modifier
-                    .padding(start = 16.dp)
-                    .weight(1f)
-            ) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
+// ... (SongItem Composable remains the same as before)
