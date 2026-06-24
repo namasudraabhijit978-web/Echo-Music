@@ -19,6 +19,7 @@ package com.echomusic.app.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
+import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Song
 import com.echomusic.app.playback.PlaybackController
@@ -35,6 +36,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val songRepository: SongRepository,
+    private val favoriteRepository: FavoriteRepository,
     private val playbackController: PlaybackController
 ) : ViewModel() {
 
@@ -50,7 +52,11 @@ class MainViewModel @Inject constructor(
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
 
+    private val _isCurrentSongFavorite = MutableStateFlow(false)
+    val isCurrentSongFavorite: StateFlow<Boolean> = _isCurrentSongFavorite.asStateFlow()
+
     private var positionJob: Job? = null
+    private var favoriteJob: Job? = null
 
     init {
         playbackController.initializeController()
@@ -98,6 +104,23 @@ class MainViewModel @Inject constructor(
     fun playSong(song: Song) {
         _currentSong.value = song
         playbackController.playSong(song)
+        checkIfFavorite(song.id)
+    }
+
+    private fun checkIfFavorite(songId: Long) {
+        favoriteJob?.cancel()
+        favoriteJob = viewModelScope.launch {
+            favoriteRepository.isFavorite(songId).collect { isFav ->
+                _isCurrentSongFavorite.value = isFav
+            }
+        }
+    }
+
+    fun toggleFavorite() {
+        val song = _currentSong.value ?: return
+        viewModelScope.launch {
+            favoriteRepository.toggleFavorite(song, _isCurrentSongFavorite.value)
+        }
     }
 
     fun togglePlayPause() {
@@ -120,6 +143,7 @@ class MainViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         positionJob?.cancel()
+        favoriteJob?.cancel()
         playbackController.releaseController()
     }
 }
