@@ -23,6 +23,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
+import com.echomusic.app.model.Album
 import com.echomusic.app.model.Song
 import com.echomusic.app.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -59,6 +61,19 @@ class MainViewModel @Inject constructor(
                 it.artist.contains(query, ignoreCase = true) 
             }
         }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val albums: StateFlow<List<Album>> = _songs.map { songList ->
+        songList.groupBy { it.albumId }.map { (albumId, songs) ->
+            val firstSong = songs.first()
+            Album(
+                id = albumId,
+                title = firstSong.album,
+                artist = firstSong.artist,
+                artworkUri = firstSong.artworkUri,
+                songs = songs.sortedBy { it.title }
+            )
+        }.sortedBy { it.title }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _favoriteSongs = MutableStateFlow<List<Song>>(emptyList())
@@ -151,6 +166,10 @@ class MainViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun getAlbumById(albumId: Long): Album? {
+        return albums.value.find { it.id == albumId }
     }
 
     fun playSong(song: Song, playlist: List<Song> = filteredSongs.value) {
