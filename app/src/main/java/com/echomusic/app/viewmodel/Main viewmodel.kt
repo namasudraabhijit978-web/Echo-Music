@@ -23,6 +23,7 @@ import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Song
 import com.echomusic.app.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,11 @@ class MainViewModel @Inject constructor(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _currentPosition = MutableStateFlow(0L)
+    val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
+
+    private var positionJob: Job? = null
+
     init {
         playbackController.initializeController()
         setupPlayerListener()
@@ -53,13 +59,27 @@ class MainViewModel @Inject constructor(
 
     private fun setupPlayerListener() {
         viewModelScope.launch {
-            // Delay to wait for controller initialization
             delay(500)
             playbackController.mediaController?.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     _isPlaying.value = isPlaying
+                    if (isPlaying) {
+                        startPositionUpdates()
+                    } else {
+                        positionJob?.cancel()
+                    }
                 }
             })
+        }
+    }
+
+    private fun startPositionUpdates() {
+        positionJob?.cancel()
+        positionJob = viewModelScope.launch {
+            while (true) {
+                _currentPosition.value = playbackController.currentPosition
+                delay(1000)
+            }
         }
     }
 
@@ -84,8 +104,22 @@ class MainViewModel @Inject constructor(
         playbackController.playPause()
     }
 
+    fun seekTo(position: Long) {
+        playbackController.seekTo(position)
+        _currentPosition.value = position
+    }
+
+    fun skipToNext() {
+        playbackController.skipToNext()
+    }
+
+    fun skipToPrevious() {
+        playbackController.skipToPrevious()
+    }
+
     override fun onCleared() {
         super.onCleared()
+        positionJob?.cancel()
         playbackController.releaseController()
     }
 }
