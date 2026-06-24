@@ -29,9 +29,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,7 +46,20 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
-    val songs: StateFlow<List<Song>> = _songs.asStateFlow()
+    
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredSongs: StateFlow<List<Song>> = combine(_songs, _searchQuery) { songList, query ->
+        if (query.isBlank()) {
+            songList
+        } else {
+            songList.filter { 
+                it.title.contains(query, ignoreCase = true) || 
+                it.artist.contains(query, ignoreCase = true) 
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _favoriteSongs = MutableStateFlow<List<Song>>(emptyList())
     val favoriteSongs: StateFlow<List<Song>> = _favoriteSongs.asStateFlow()
@@ -84,7 +100,6 @@ class MainViewModel @Inject constructor(
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     mediaItem?.mediaId?.toLongOrNull()?.let { id ->
-                        // Pehle all songs mein dhundho, nahi toh favorites mein dhundho
                         val song = _songs.value.find { it.id == id } ?: _favoriteSongs.value.find { it.id == id }
                         if (song != null) {
                             _currentSong.value = song
@@ -134,7 +149,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun playSong(song: Song, playlist: List<Song> = _songs.value) {
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun playSong(song: Song, playlist: List<Song> = filteredSongs.value) {
         _currentSong.value = song
         val index = playlist.indexOfFirst { it.id == song.id }
         
