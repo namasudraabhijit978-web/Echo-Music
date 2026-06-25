@@ -55,14 +55,8 @@ class MainViewModel @Inject constructor(
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     val filteredSongs: StateFlow<List<Song>> = combine(_songs, _searchQuery) { songList, query ->
-        if (query.isBlank()) {
-            songList
-        } else {
-            songList.filter { 
-                it.title.contains(query, ignoreCase = true) || 
-                it.artist.contains(query, ignoreCase = true) 
-            }
-        }
+        if (query.isBlank()) songList
+        else songList.filter { it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val albums: StateFlow<List<Album>> = _songs.map { songList ->
@@ -93,15 +87,26 @@ class MainViewModel @Inject constructor(
     private val _isCurrentSongFavorite = MutableStateFlow(false)
     val isCurrentSongFavorite: StateFlow<Boolean> = _isCurrentSongFavorite.asStateFlow()
 
-    // --- Audio Effect States ---
+    // Shuffle & Repeat States
+    private val _isShuffleEnabled = MutableStateFlow(false)
+    val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
+    val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
+
+    // Audio Effect States
     private val _bassBoostLevel = MutableStateFlow(0f)
     val bassBoostLevel: StateFlow<Float> = _bassBoostLevel.asStateFlow()
 
     private val _virtualizerLevel = MutableStateFlow(0f)
     val virtualizerLevel: StateFlow<Float> = _virtualizerLevel.asStateFlow()
 
+    private val _sleepTimerMinutes = MutableStateFlow(0)
+    val sleepTimerMinutes: StateFlow<Int> = _sleepTimerMinutes.asStateFlow()
+
     private var positionJob: Job? = null
     private var favoriteJob: Job? = null
+    private var sleepTimerJob: Job? = null
 
     init {
         playbackController.initializeController { player ->
@@ -115,11 +120,7 @@ class MainViewModel @Inject constructor(
             player.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     _isPlaying.value = isPlaying
-                    if (isPlaying) {
-                        startPositionUpdates()
-                    } else {
-                        positionJob?.cancel()
-                    }
+                    if (isPlaying) startPositionUpdates() else positionJob?.cancel()
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -130,6 +131,14 @@ class MainViewModel @Inject constructor(
                             checkIfFavorite(id)
                         }
                     }
+                }
+
+                override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                    _isShuffleEnabled.value = shuffleModeEnabled
+                }
+
+                override fun onRepeatModeChanged(repeatMode: Int) {
+                    _repeatMode.value = repeatMode
                 }
             })
         }
@@ -173,32 +182,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun getAlbumById(albumId: Long): Album? {
-        return albums.value.find { it.id == albumId }
-    }
+    fun getAlbumById(albumId: Long): Album? = albums.value.find { it.id == albumId }
 
     fun playSong(song: Song, playlist: List<Song> = filteredSongs.value) {
         _currentSong.value = song
         val index = playlist.indexOfFirst { it.id == song.id }
-        
-        if (index != -1) {
-            playbackController.playPlaylist(playlist, index)
-        } else {
-            playbackController.playPlaylist(listOf(song), 0)
-        }
+        if (index != -1) playbackController.playPlaylist(playlist, index)
+        else playbackController.playPlaylist(listOf(song), 0)
         checkIfFavorite(song.id)
     }
 
     private fun checkIfFavorite(songId: Long) {
         favoriteJob?.cancel()
         favoriteJob = viewModelScope.launch {
-            favoriteRepository.isFavorite(songId).collect { isFav ->
-                _isCurrentSongFavorite.value = isFav
-            }
+            favoriteRepository.isFavorite(songId).collect { isFav -> _isCurrentSongFavorite.value = isFav }
         }
     }
 
@@ -209,24 +208,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun togglePlayPause() {
-        playbackController.playPause()
+    fun togglePlayPause() = playbackController.playPause()
+    fun seekTo(position: Long) { playbackController.seekTo(position); _currentPosition.value = position }
+    fun skipToNext() = playbackController.skipToNext()
+    fun skipToPrevious() = playbackController.skipToPrevious()
+
+    fun toggleShuffle() {
+        playbackController.setShuffleModeEnabled(!_isShuffleEnabled.value)
     }
 
-    fun seekTo(position: Long) {
-        playbackController.seekTo(position)
-        _currentPosition.value = position
+    fun toggleRepeat() {
+        val nextMode = when (_repeatMode.value) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+        playbackController.setRepeatMode(nextMode)
     }
 
-    fun skipToNext() {
-        playbackController.skipToNext()
-    }
-
-    fun skipToPrevious() {
-        playbackController.skipToPrevious()
-    }
-
-    // --- Audio Effects Functions --- //
     fun setBassBoost(level: Float) {
         _bassBoostLevel.value = level
         audioEffectController.setBassBoostStrength((level * 1000).toInt().toShort())
@@ -237,10 +236,23 @@ class MainViewModel @Inject constructor(
         audioEffectController.setVirtualizerStrength((level * 1000).toInt().toShort())
     }
 
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        _sleepTimerMinutes.value = minutes
+        if (minutes > 0) {
+            sleepTimerJob = viewModelScope.launch {
+                delay(minutes * 60 * 1000L)
+                playbackController.pause()
+                _sleepTimerMinutes.value = 0
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         positionJob?.cancel()
         favoriteJob?.cancel()
+        sleepTimerJob?.cancel()
         playbackController.releaseController()
     }
 }
