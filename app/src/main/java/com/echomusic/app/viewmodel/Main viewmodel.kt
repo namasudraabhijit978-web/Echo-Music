@@ -25,6 +25,7 @@ import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Album
 import com.echomusic.app.model.Song
+import com.echomusic.app.playback.AudioEffectController
 import com.echomusic.app.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -44,7 +45,8 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val playbackController: PlaybackController
+    private val playbackController: PlaybackController,
+    private val audioEffectController: AudioEffectController
 ) : ViewModel() {
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
@@ -91,19 +93,26 @@ class MainViewModel @Inject constructor(
     private val _isCurrentSongFavorite = MutableStateFlow(false)
     val isCurrentSongFavorite: StateFlow<Boolean> = _isCurrentSongFavorite.asStateFlow()
 
+    // --- Audio Effect States ---
+    private val _bassBoostLevel = MutableStateFlow(0f)
+    val bassBoostLevel: StateFlow<Float> = _bassBoostLevel.asStateFlow()
+
+    private val _virtualizerLevel = MutableStateFlow(0f)
+    val virtualizerLevel: StateFlow<Float> = _virtualizerLevel.asStateFlow()
+
     private var positionJob: Job? = null
     private var favoriteJob: Job? = null
 
     init {
-        playbackController.initializeController()
-        setupPlayerListener()
+        playbackController.initializeController { player ->
+            setupPlayerListener(player)
+        }
         loadFavorites()
     }
 
-    private fun setupPlayerListener() {
+    private fun setupPlayerListener(player: Player) {
         viewModelScope.launch {
-            delay(500)
-            playbackController.mediaController?.addListener(object : Player.Listener {
+            player.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     _isPlaying.value = isPlaying
                     if (isPlaying) {
@@ -215,6 +224,17 @@ class MainViewModel @Inject constructor(
 
     fun skipToPrevious() {
         playbackController.skipToPrevious()
+    }
+
+    // --- Audio Effects Functions --- //
+    fun setBassBoost(level: Float) {
+        _bassBoostLevel.value = level
+        audioEffectController.setBassBoostStrength((level * 1000).toInt().toShort())
+    }
+
+    fun setVirtualizer(level: Float) {
+        _virtualizerLevel.value = level
+        audioEffectController.setVirtualizerStrength((level * 1000).toInt().toShort())
     }
 
     override fun onCleared() {
