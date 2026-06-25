@@ -45,4 +45,7 @@
 
     </application>
 
+        android:icon="@drawable/ic_music_logo"
+        android:roundIcon="@drawable/ic_music_logo"
+
 </manifest>
