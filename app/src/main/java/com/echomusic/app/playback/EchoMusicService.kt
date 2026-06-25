@@ -16,6 +16,7 @@
 
 package com.echomusic.app.playback
 
+import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
@@ -25,11 +26,11 @@ import androidx.media3.session.MediaSessionService
 class EchoMusicService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
-    private lateinit var player: ExoPlayer
+    private var player: ExoPlayer? = null
 
     override fun onCreate() {
         super.onCreate()
-        
+
         val audioAttributes = AudioAttributes.Builder()
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .setUsage(C.USAGE_MEDIA)
@@ -37,14 +38,22 @@ class EchoMusicService : MediaSessionService() {
 
         player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
-            .setHandleAudioBecomingNoisy(true)
+            .setHandleAudioBecomingNoisy(true) // Earphone nikalne par music pause ho jayega
             .build()
 
-        mediaSession = MediaSession.Builder(this, player).build()
+        mediaSession = MediaSession.Builder(this, player!!)
+            .build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val currentPlayer = player ?: return
+        if (!currentPlayer.playWhenReady || currentPlayer.mediaItemCount == 0) {
+            stopSelf()
+        }
     }
 
     override fun onDestroy() {
