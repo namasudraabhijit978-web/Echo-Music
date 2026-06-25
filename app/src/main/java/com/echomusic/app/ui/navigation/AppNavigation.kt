@@ -30,6 +30,7 @@ import com.echomusic.app.ui.screens.EqualizerScreen
 import com.echomusic.app.ui.screens.FavoritesScreen
 import com.echomusic.app.ui.screens.HomeScreen
 import com.echomusic.app.ui.screens.PlayerScreen
+import com.echomusic.app.ui.screens.SettingsScreen
 import com.echomusic.app.viewmodel.MainViewModel
 
 @Composable
@@ -45,7 +46,8 @@ fun AppNavigation(viewModel: MainViewModel) {
                 viewModel = viewModel,
                 onNavigateToPlayer = { navController.navigate("player") },
                 onNavigateToFavorites = { navController.navigate("favorites") },
-                onNavigateToAlbums = { navController.navigate("albums") }
+                onNavigateToAlbums = { navController.navigate("albums") },
+                onNavigateToSettings = { navController.navigate("settings") }
             )
         }
 
@@ -81,6 +83,13 @@ fun AppNavigation(viewModel: MainViewModel) {
 
         composable("equalizer") {
             EqualizerScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("settings") {
+            SettingsScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
