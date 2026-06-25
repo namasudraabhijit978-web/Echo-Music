@@ -53,7 +53,6 @@ class PlaybackController @Inject constructor(
             
             controller?.addListener(object : Player.Listener {
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                    // Yahan se hardware audio session ID milti hai
                     audioEffectController.setupEffects(audioSessionId)
                 }
             })
@@ -93,6 +92,10 @@ class PlaybackController @Inject constructor(
         }
     }
 
+    fun pause() {
+        mediaController?.pause()
+    }
+
     fun seekTo(position: Long) {
         mediaController?.seekTo(position)
     }
@@ -103,6 +106,14 @@ class PlaybackController @Inject constructor(
 
     fun skipToPrevious() {
         mediaController?.seekToPreviousMediaItem()
+    }
+
+    fun setShuffleModeEnabled(enabled: Boolean) {
+        mediaController?.shuffleModeEnabled = enabled
+    }
+
+    fun setRepeatMode(repeatMode: Int) {
+        mediaController?.repeatMode = repeatMode
     }
 
     fun releaseController() {
