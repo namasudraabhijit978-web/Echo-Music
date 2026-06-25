@@ -53,6 +53,7 @@ class PlaybackController @Inject constructor(
             
             controller?.addListener(object : Player.Listener {
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    // Yahan se hardware audio session ID milti hai
                     audioEffectController.setupEffects(audioSessionId)
                 }
             })
