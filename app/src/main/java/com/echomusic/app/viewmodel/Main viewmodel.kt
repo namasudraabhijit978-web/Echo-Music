@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.echomusic.app.data.preferences.SettingsManager
 import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Album
@@ -46,7 +47,8 @@ class MainViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val favoriteRepository: FavoriteRepository,
     private val playbackController: PlaybackController,
-    private val audioEffectController: AudioEffectController
+    private val audioEffectController: AudioEffectController,
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
@@ -103,6 +105,10 @@ class MainViewModel @Inject constructor(
 
     private val _sleepTimerMinutes = MutableStateFlow(0)
     val sleepTimerMinutes: StateFlow<Int> = _sleepTimerMinutes.asStateFlow()
+
+    // Theme Settings State
+    private val _themeMode = MutableStateFlow(settingsManager.getThemeMode())
+    val themeMode: StateFlow<Int> = _themeMode.asStateFlow()
 
     private var positionJob: Job? = null
     private var favoriteJob: Job? = null
@@ -246,6 +252,11 @@ class MainViewModel @Inject constructor(
                 _sleepTimerMinutes.value = 0
             }
         }
+    }
+
+    fun setThemeMode(mode: Int) {
+        settingsManager.setThemeMode(mode)
+        _themeMode.value = mode
     }
 
     override fun onCleared() {
