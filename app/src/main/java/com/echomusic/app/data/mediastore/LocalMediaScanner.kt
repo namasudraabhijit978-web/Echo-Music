@@ -18,21 +18,27 @@ package com.echomusic.app.data.mediastore
 
 import android.content.ContentUris
 import android.content.Context
-import android.net.Uri
 import android.provider.MediaStore
 import com.echomusic.app.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class LocalMediaScanner @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     suspend fun scanLocalAudioFiles(): List<Song> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
-        val uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         
+        val collection = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
@@ -41,11 +47,18 @@ class LocalMediaScanner @Inject constructor(
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION
         )
-        
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        // Filter: Sirf music files aur jinki duration 30 seconds (30000 ms) se zyada ho
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 30000"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
-        context.contentResolver.query(uri, projection, selection, null, sortOrder)?.use { cursor ->
+        context.contentResolver.query(
+            collection,
+            projection,
+            selection,
+            null,
+            sortOrder
+        )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -57,13 +70,14 @@ class LocalMediaScanner @Inject constructor(
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
+                val albumId = cursor.getLong(albumIdColumn)
+                
                 val title = cursor.getString(titleColumn) ?: "Unknown Title"
                 val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
                 val album = cursor.getString(albumColumn) ?: "Unknown Album"
-                val albumId = cursor.getLong(albumIdColumn)
                 val duration = cursor.getLong(durationColumn)
-
-                val mediaUri = ContentUris.withAppendedId(uri, id)
+                
+                val mediaUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                 val artworkUri = ContentUris.withAppendedId(artworkUriBase, albumId)
 
                 songs.add(
