@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -72,7 +73,8 @@ fun HomeScreen(
     viewModel: MainViewModel,
     onNavigateToPlayer: () -> Unit,
     onNavigateToFavorites: () -> Unit,
-    onNavigateToAlbums: () -> Unit
+    onNavigateToAlbums: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val songs by viewModel.filteredSongs.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -113,18 +115,13 @@ fun HomeScreen(
                 title = { Text("Echo Music") },
                 actions = {
                     IconButton(onClick = onNavigateToAlbums) {
-                        Icon(
-                            imageVector = Icons.Default.Album,
-                            contentDescription = "Albums",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(imageVector = Icons.Default.Album, contentDescription = "Albums")
                     }
                     IconButton(onClick = onNavigateToFavorites) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Favorites",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Icon(imageVector = Icons.Default.Favorite, contentDescription = "Favorites", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
             )
@@ -204,4 +201,50 @@ fun HomeScreen(
     }
 }
 
-// ... (SongItem Composable remains the same as before)
+@Composable
+fun SongItem(song: Song, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AlbumArtImage(
+                uri = song.artworkUri,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            
+            Column(
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .weight(1f)
+            ) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
