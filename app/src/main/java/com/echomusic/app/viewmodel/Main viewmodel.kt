@@ -25,9 +25,11 @@ import com.echomusic.app.data.preferences.SettingsManager
 import com.echomusic.app.data.repository.FavoriteRepository
 import com.echomusic.app.data.repository.SongRepository
 import com.echomusic.app.model.Album
+import com.echomusic.app.model.LyricLine
 import com.echomusic.app.model.Song
 import com.echomusic.app.playback.AudioEffectController
 import com.echomusic.app.playback.PlaybackController
+import com.echomusic.app.utils.LyricsParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -89,6 +91,10 @@ class MainViewModel @Inject constructor(
     private val _isCurrentSongFavorite = MutableStateFlow(false)
     val isCurrentSongFavorite: StateFlow<Boolean> = _isCurrentSongFavorite.asStateFlow()
 
+    // Lyrics State
+    private val _lyrics = MutableStateFlow<List<LyricLine>>(emptyList())
+    val lyrics: StateFlow<List<LyricLine>> = _lyrics.asStateFlow()
+
     // Shuffle & Repeat States
     private val _isShuffleEnabled = MutableStateFlow(false)
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
@@ -135,6 +141,7 @@ class MainViewModel @Inject constructor(
                         if (song != null) {
                             _currentSong.value = song
                             checkIfFavorite(id)
+                            loadLyricsForSong(song)
                         }
                     }
                 }
@@ -155,9 +162,15 @@ class MainViewModel @Inject constructor(
         positionJob = viewModelScope.launch {
             while (true) {
                 _currentPosition.value = playbackController.currentPosition
-                delay(1000)
+                delay(200) // Tez update for smooth lyrics scrolling (200ms)
             }
         }
+    }
+
+    private fun loadLyricsForSong(song: Song) {
+        // In future, you can read actual .lrc file from storage using song.title
+        // For now, we load dummy lyrics to verify UI works perfectly
+        _lyrics.value = LyricsParser.getDummyLyrics()
     }
 
     fun loadSongs() {
@@ -198,6 +211,7 @@ class MainViewModel @Inject constructor(
         if (index != -1) playbackController.playPlaylist(playlist, index)
         else playbackController.playPlaylist(listOf(song), 0)
         checkIfFavorite(song.id)
+        loadLyricsForSong(song)
     }
 
     private fun checkIfFavorite(songId: Long) {
