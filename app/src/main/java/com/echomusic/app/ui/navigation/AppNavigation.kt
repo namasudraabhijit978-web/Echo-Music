@@ -26,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.echomusic.app.ui.screens.AlbumDetailsScreen
 import com.echomusic.app.ui.screens.AlbumsScreen
+import com.echomusic.app.ui.screens.EqualizerScreen
 import com.echomusic.app.ui.screens.FavoritesScreen
 import com.echomusic.app.ui.screens.HomeScreen
 import com.echomusic.app.ui.screens.PlayerScreen
@@ -44,7 +45,6 @@ fun AppNavigation(viewModel: MainViewModel) {
                 viewModel = viewModel,
                 onNavigateToPlayer = { navController.navigate("player") },
                 onNavigateToFavorites = { navController.navigate("favorites") },
-                // Note: Isko abhi UI me call karna hai for Album list
                 onNavigateToAlbums = { navController.navigate("albums") }
             )
         }
@@ -78,6 +78,13 @@ fun AppNavigation(viewModel: MainViewModel) {
                 onNavigateToPlayer = { navController.navigate("player") }
             )
         }
+
+        composable("equalizer") {
+            EqualizerScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
         
         composable(
             route = "player",
@@ -96,7 +103,8 @@ fun AppNavigation(viewModel: MainViewModel) {
         ) {
             PlayerScreen(
                 viewModel = viewModel,
-                onClose = { navController.popBackStack() }
+                onClose = { navController.popBackStack() },
+                onNavigateToEqualizer = { navController.navigate("equalizer") }
             )
         }
     }
