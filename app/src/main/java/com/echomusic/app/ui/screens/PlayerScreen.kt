@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,7 +63,8 @@ import java.util.Locale
 @Composable
 fun PlayerScreen(
     viewModel: MainViewModel,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onNavigateToEqualizer: () -> Unit
 ) {
     val currentSong by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
@@ -88,6 +90,15 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
+                    // Equalizer Navigate Button
+                    IconButton(onClick = onNavigateToEqualizer) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Equalizer",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    // Favorite Toggle Button
                     IconButton(onClick = { viewModel.toggleFavorite() }) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
